@@ -1,0 +1,173 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>凡尔纳幻想王国 · Voyages Extraordinaires</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Noto+Serif+SC:wght@400;600;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brass: #c9a24a; --brass-hi: #ecd28a; --brass-lo: #7a5a22;
+      --ink: #1a1410; --paper: #efe3c6; --paper-2: #e2d1a8;
+      --panel: rgba(20, 17, 13, 0.78); --line: rgba(201, 162, 74, 0.55);
+      --serif: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+      --deco: 'Cinzel', 'Times New Roman', serif;
+      --ital: 'Cormorant Garamond', 'Times New Roman', serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0d10; color: var(--paper); font-family: var(--serif); }
+    #app, #app canvas { position: fixed; inset: 0; display: block; }
+    button { font-family: inherit; }
+
+    /* —— 载入画面 —— */
+    #loader { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #2b2217 0%, #120e0a 70%); transition: opacity 1.2s ease; }
+    #loader.done { opacity: 0; pointer-events: none; }
+    .ld { text-align: center; width: min(560px, 86vw); }
+    .ld .emb { width: 120px; height: 120px; margin: 0 auto 22px; border-radius: 50%; border: 2px solid var(--brass); display: grid; place-items: center; position: relative; box-shadow: 0 0 40px rgba(201,162,74,.25), inset 0 0 30px rgba(201,162,74,.2); }
+    .ld .emb::before { content: ''; position: absolute; inset: 8px; border: 1px dashed var(--brass-lo); border-radius: 50%; animation: spin 18s linear infinite; }
+    .ld .emb svg { width: 72px; height: 72px; animation: spin 8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ld h1 { font-family: var(--deco); font-weight: 700; letter-spacing: .28em; font-size: clamp(20px, 3.4vw, 32px); margin: 0; color: var(--brass-hi); }
+    .ld h2 { font-weight: 900; letter-spacing: .5em; font-size: clamp(16px, 2.4vw, 22px); margin: 10px 0 26px; color: var(--paper); }
+    .ld .bar { height: 3px; background: rgba(201,162,74,.18); border-radius: 2px; overflow: hidden; }
+    #load-bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--brass-lo), var(--brass-hi)); transition: width .3s; }
+    #load-msg { margin-top: 14px; font-family: var(--ital); font-style: italic; font-size: 17px; color: #b7a37a; min-height: 1.4em; }
+    .ld .quote { margin-top: 34px; font-size: 13px; color: #8a7a5a; line-height: 1.8; }
+
+    /* —— 标题牌 —— */
+    #title { position: fixed; left: 22px; top: 18px; z-index: 5; pointer-events: none; }
+    #title .fr { font-family: var(--deco); letter-spacing: .32em; font-size: 13px; color: var(--brass-hi); text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+    #title .zh { font-weight: 900; font-size: 26px; letter-spacing: .18em; text-shadow: 0 2px 14px rgba(0,0,0,.85); }
+    #title .sub { font-family: var(--ital); font-style: italic; color: #d8c79b; font-size: 15px; text-shadow: 0 1px 6px rgba(0,0,0,.9); }
+
+    /* —— 景点列表 —— */
+    #panel { position: fixed; left: 18px; top: 104px; bottom: 96px; width: 248px; z-index: 5; display: flex; flex-direction: column; gap: 6px; transition: transform .45s cubic-bezier(.2,.8,.2,1); }
+    body.panel-collapsed #panel { transform: translateX(-290px); }
+    #panel .hd { font-family: var(--deco); font-size: 11px; letter-spacing: .3em; color: var(--brass); padding: 0 4px 4px; border-bottom: 1px solid var(--line); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    #spots { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; scrollbar-width: thin; scrollbar-color: var(--brass-lo) transparent; }
+    .spot { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--panel); border: 1px solid rgba(201,162,74,.25); border-radius: 3px; backdrop-filter: blur(6px); transition: border-color .2s, background .2s, transform .2s; }
+    .spot:hover { border-color: var(--brass); transform: translateX(3px); }
+    .spot.active { border-color: var(--brass-hi); background: linear-gradient(90deg, rgba(122,90,34,.55), rgba(20,17,13,.8)); }
+    .spot .no { flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--brass); font-family: var(--deco); font-size: 12px; color: var(--brass-hi); }
+    .spot .t b { display: block; font-size: 15px; font-weight: 600; letter-spacing: .06em; }
+    .spot .t i { display: block; font-family: var(--ital); font-size: 13px; color: #bfae86; }
+
+    /* —— 信息卡（羊皮纸） —— */
+    #info { position: fixed; right: 20px; top: 20px; width: 340px; max-height: calc(100vh - 140px); overflow-y: auto; z-index: 6; color: var(--ink); background: linear-gradient(180deg, var(--paper), var(--paper-2)); border-radius: 2px; padding: 22px 24px 20px; box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 60px rgba(120,80,30,.25); border: 1px solid #b89a5a; transform: translateX(380px); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .4s; }
+    #info.show { transform: none; opacity: 1; }
+    #info::before { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(122,90,34,.45); pointer-events: none; }
+    #info-close { all: unset; position: absolute; right: 12px; top: 8px; cursor: pointer; font-size: 22px; color: #7a5a22; }
+    #info-no { font-family: var(--deco); font-size: 12px; letter-spacing: .3em; color: #7a5a22; }
+    #info-title { font-size: 26px; font-weight: 900; margin: 4px 0 0; letter-spacing: .08em; }
+    #info-fr { font-family: var(--ital); font-style: italic; font-size: 18px; color: #5a4220; }
+    #info-book { margin: 12px 0 10px; padding: 6px 0; border-top: 1px solid rgba(122,90,34,.4); border-bottom: 1px solid rgba(122,90,34,.4); font-size: 13px; color: #5a4220; }
+    #info-text { font-size: 14.5px; line-height: 1.9; text-align: justify; }
+    #info-tips { margin-top: 10px; font-size: 13px; color: #7a3a1a; }
+    #info-tips:not(:empty)::before { content: '❦ '; }
+
+    /* —— 底部控制台 —— */
+    #dock { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 40px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px rgba(0,0,0,.45); max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center; }
+    .btn { all: unset; cursor: pointer; padding: 7px 13px; border-radius: 20px; font-size: 13.5px; letter-spacing: .06em; color: var(--paper); border: 1px solid transparent; transition: all .2s; white-space: nowrap; }
+    .btn:hover { border-color: var(--line); color: var(--brass-hi); }
+    .btn.on { background: linear-gradient(180deg, #d8b45c, #9a7430); color: #1a1208; font-weight: 600; }
+    .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+    .clock { display: flex; align-items: center; gap: 8px; }
+    #time-label { font-family: var(--deco); color: var(--brass-hi); font-size: 14px; width: 48px; text-align: center; }
+    #time-slider { -webkit-appearance: none; appearance: none; width: 130px; height: 3px; background: linear-gradient(90deg, #1b2440, #e8b070 25%, #9ccbe8 50%, #e8a060 75%, #1b2440); border-radius: 2px; outline: none; }
+    #time-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--brass-hi); border: 2px solid #5a4220; cursor: pointer; }
+    #time-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--brass-hi); border: 2px solid #5a4220; cursor: pointer; }
+
+    /* —— 景点漂浮标签 —— */
+    #labels { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
+    .label { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap; padding: 4px 10px 4px 4px; font-size: 13px; letter-spacing: .06em; background: rgba(20,17,13,.72); border: 1px solid var(--line); border-radius: 14px; color: var(--paper); display: none; backdrop-filter: blur(3px); }
+    .label span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; margin-right: 6px; background: var(--brass); color: #1a1208; font-family: var(--deco); font-size: 9px; }
+    .label::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 1px; height: 7px; background: var(--brass); }
+    .label:hover { border-color: var(--brass-hi); color: var(--brass-hi); }
+    body.no-labels #labels, body.riding #labels { display: none; }
+
+    #ride-hint { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 7; padding: 8px 18px; border-radius: 20px; background: rgba(20,17,13,.8); border: 1px solid var(--line); font-size: 14px; display: none; }
+    body.riding #ride-hint { display: block; }
+    body.riding #panel { transform: translateX(-290px); }
+    #help { position: fixed; right: 20px; bottom: 22px; z-index: 5; font-size: 12px; color: rgba(239,227,198,.6); text-align: right; line-height: 1.7; text-shadow: 0 1px 4px #000; pointer-events: none; }
+
+    @media (max-width: 760px) {
+      #panel { width: 210px; top: 90px; bottom: 150px; }
+      #title .zh { font-size: 20px; }
+      #info { width: calc(100vw - 32px); right: 16px; top: auto; bottom: 150px; max-height: 45vh; }
+      #help { display: none; }
+      #time-slider { width: 90px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="labels"></div>
+
+  <div id="loader">
+    <div class="ld">
+      <div class="emb">
+        <svg viewBox="0 0 100 100" fill="none" stroke="#c9a24a" stroke-width="3">
+          <circle cx="50" cy="50" r="22" /><circle cx="50" cy="50" r="7" fill="#c9a24a" />
+          <g stroke-width="7" stroke-linecap="square">
+            <line x1="50" y1="12" x2="50" y2="22" /><line x1="50" y1="78" x2="50" y2="88" /><line x1="12" y1="50" x2="22" y2="50" /><line x1="78" y1="50" x2="88" y2="50" />
+            <line x1="23" y1="23" x2="30" y2="30" /><line x1="70" y1="70" x2="77" y2="77" /><line x1="77" y1="23" x2="70" y2="30" /><line x1="23" y1="77" x2="30" y2="70" />
+          </g>
+        </svg>
+      </div>
+      <h1>VOYAGES EXTRAORDINAIRES</h1>
+      <h2>凡尔纳幻想王国</h2>
+      <div class="bar"><div id="load-bar"></div></div>
+      <div id="load-msg">正在开启……</div>
+      <div class="quote">“凡是一个人能够想象的事物，<br/>必定有人能把它变为现实。”<br/>—— 儒勒·凡尔纳</div>
+    </div>
+  </div>
+
+  <div id="title">
+    <div class="fr">VOYAGES EXTRAORDINAIRES</div>
+    <div class="zh">凡尔纳幻想王国</div>
+    <div class="sub">Le Royaume de Jules Verne</div>
+  </div>
+
+  <div id="panel">
+    <div class="hd"><span>LES ATTRACTIONS · 景点</span></div>
+    <div id="spots"></div>
+  </div>
+
+  <aside id="info">
+    <button id="info-close" title="关闭">×</button>
+    <div id="info-no"></div>
+    <div id="info-title"></div>
+    <div id="info-fr"></div>
+    <div id="info-book"></div>
+    <div id="info-text"></div>
+    <div id="info-tips"></div>
+  </aside>
+
+  <div id="ride-hint"></div>
+
+  <div id="dock">
+    <button class="btn" id="btn-panel" title="显示/隐藏景点列表">☰</button>
+    <button class="btn" id="btn-overview">全景</button>
+    <button class="btn" id="btn-tour">漫游导览</button>
+    <button class="btn" id="btn-ride">骑乘大象</button>
+    <button class="btn" id="btn-fly">登上信天翁号</button>
+    <button class="btn" id="btn-train">乘坐火车</button>
+    <div class="sep"></div>
+    <div class="clock">
+      <button class="btn" id="btn-day">白昼</button>
+      <button class="btn" id="btn-dusk">黄昏</button>
+      <button class="btn" id="btn-night">夜晚</button>
+      <input id="time-slider" type="range" min="0" max="23.99" step="0.01" value="17.2" />
+      <span id="time-label">17:12</span>
+      <button class="btn" id="btn-auto" title="让时间自动流逝">⟳ 流逝</button>
+    </div>
+    <div class="sep"></div>
+    <button class="btn on" id="btn-labels" title="显示/隐藏标签">标签</button>
+  </div>
+
+  <div id="help">左键拖动 旋转 · 右键拖动 平移 · 滚轮 缩放<br/>N 切换昼夜 · Esc 退出乘坐</div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

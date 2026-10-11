@@ -1,0 +1,18 @@
+{
+  "name": "verne-wonderland",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "凡尔纳幻想乐园 —— 程序化建模的儒勒·凡尔纳科幻主题乐园 (Three.js)",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5354",
+    "build": "vite build",
+    "preview": "vite preview --port 5355"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}
